@@ -28,16 +28,21 @@ def main():
             print("compile %s fail" % (code,))
             return
 
-    # compile kernel
-    kernel = "kernel.asm"
-    if not os.path.exists(kernel):
-        print("kernel file %s not exist" % kernel)
-        return
-    code = subprocess.call(["nasm", "-f", "elf", "kernel.asm", "-o", "kernel.o"])
-    if code != 0:
-        print("compile kernel.asm fail")
-        return
-    code = subprocess.call(["ld", "-m", "elf_i386", "-Ttext", "0x30400", "-s", "kernel.o", "-o", "kernel.bin"])
+    kds = ["kernel.asm", "string.asm", "start.c", "kliba.asm"]
+    ops = []
+    for f in kds:
+        if f.endswith(".c"):
+            ops.append(f.replace(".c", ".o", 1))
+            code = subprocess.call(["gcc", "-m32", "-c", "-o", f.replace(".c", ".o", 1), f])
+            if code != 0:
+                return
+        else:
+            ops.append(f.replace(".asm", ".o", 1))
+            code = subprocess.call(["nasm", "-f", "elf", "-o", f.replace(".asm", ".o", 1), f], )
+            if code != 0:
+                return
+    print(ops)
+    code = subprocess.call(["ld", "-s", "-m", "elf_i386", "-Ttext", "0x30400", "-o", "kernel.bin"] + ops)
     if code != 0:
         print("link kernel fail")
         return
@@ -57,6 +62,9 @@ def main():
                 print("%s write %d bytes to a.img at offset %d " % (f, len(bs), offset))
                 offset += 512 * 10  # 默认10个扇区,一个byte 8个字节
     print("mission complete")
+    # remove tmp file
+    # subprocess.call(["rm", "*.o"])
+    # subprocess.call(["rm", "*.bin"])
 
 
 if __name__ == "__main__":
